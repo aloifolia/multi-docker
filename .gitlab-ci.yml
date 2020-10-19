@@ -1,0 +1,50 @@
+image: docker:git
+services:
+  - docker:dind
+
+stages:
+  - build
+  - test
+  - deploy
+
+client-test:
+  stage: build
+  script:
+    - docker build -t react-test -f ./client/Dockerfile.dev ./client
+    - docker run -e CI=true react-test npm test
+
+build-all:
+  stage: build
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  script:
+    - docker build -t bagor/multi-client ./client
+    - docker build -t bagor/multi-nginx ./nginx
+    - docker build -t bagor/multi-server ./server
+    - docker build -t bagor/multi-worker ./worker
+
+push-images:
+  stage: deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  script:
+    # Log in to the docker CLI.
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+    # Take those images and push them to docker hub.
+    - docker push bagor/multi-client
+    - docker push bagor/multi-nginx
+    - docker push bagor/multi-server
+    - docker push bagor/multi-worker
+#notify-aws:
+
+#deploy:
+#provider: elasticbeanstalk
+#region: us-east-2
+#app: multi-docker
+#env: MultiDocker-env
+#bucket_name: elasticbeanstalk-us-east-2-605267135525
+#bucket_path: docker-multi
+#on:
+#branch: master
+#access_key_id: $AWS_ACCESS_KEY
+#secret_access_key: $AWS_SECRET_KEY
