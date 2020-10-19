@@ -11,7 +11,7 @@ before_script:
   # Log in to the docker CLI.
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
 
-client-test:
+test:client:
   stage: test
   script:
     - docker build -t react-test -f ./client/Dockerfile.dev ./client
@@ -19,6 +19,7 @@ client-test:
 
 build-and-push-images:
   stage: deploy
+  needs: ["test:client"]
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
   script:
@@ -34,6 +35,7 @@ build-and-push-images:
 
 notify-aws:
   stage: deploy
+  needs: ["build-and-push-images"]
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
   script:
@@ -41,4 +43,4 @@ notify-aws:
     - touch ~/.aws/credentials
     - echo "aws_access_key_id=$AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
     - echo "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
-    - docker run -it -v ~/.aws:/root/.aws amazon/aws-cli elasticbeanstalk rebuild-environment --environment-id $AWS_ENVIRONMENT_ID --region $AWS_REGION
+    - docker run -v ~/.aws:/root/.aws amazon/aws-cli elasticbeanstalk rebuild-environment --environment-id $AWS_ENVIRONMENT_ID --region $AWS_REGION
