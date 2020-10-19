@@ -3,9 +3,13 @@ services:
   - docker:dind
 
 stages:
-  - build
   - test
+  - build
   - deploy
+
+before_script:
+  # Log in to the docker CLI.
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
 
 client-test:
   stage: test
@@ -13,8 +17,8 @@ client-test:
     - docker build -t react-test -f ./client/Dockerfile.dev ./client
     - docker run -e CI=true react-test npm test
 
-build-all:
-  stage: build
+build-and-push-images:
+  stage: deploy
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
   script:
@@ -22,14 +26,6 @@ build-all:
     - docker build -t bagor/multi-nginx ./nginx
     - docker build -t bagor/multi-server ./server
     - docker build -t bagor/multi-worker ./worker
-
-push-images:
-  stage: deploy
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "master"'
-  script:
-    # Log in to the docker CLI.
-    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
     # Take those images and push them to docker hub.
     - docker push bagor/multi-client
     - docker push bagor/multi-nginx
