@@ -5,7 +5,7 @@ services:
 stages:
   - test
   - build
-  - deploy
+  - aws
 
 before_script:
   # Log in to the docker CLI.
@@ -18,7 +18,7 @@ test:client:
     - docker run -e CI=true react-test npm test
 
 build-and-push-images:
-  stage: deploy
+  stage: build
   needs: ["test:client"]
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
@@ -34,7 +34,7 @@ build-and-push-images:
     - docker push bagor/multi-worker
 
 notify-aws:
-  stage: deploy
+  stage: aws
   needs: ["build-and-push-images"]
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
